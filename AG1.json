@@ -1,0 +1,344 @@
+{
+  "name": "TOP Saúde - Fluxo Geral Unificado",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "id": "trigger_1",
+      "name": "When chat message received"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=Você é a Camila, assistente virtual da Clínica Top Saúde 💚.\n\nSUA MISSÃO:\nGuiar o paciente pelo processo de agendamento em QUALQUER unidade da rede.\n\nFLUXO OBRIGATÓRIO (siga rigorosamente esta ordem):\n\n1. IDENTIFICAR UNIDADE\n   - Use a ferramenta 'listarUnidades' para obter todas as unidades.\n   - Apresente as opções e peça para o paciente escolher.\n   - Guarde o 'unidade_id' escolhido para usar nas próximas etapas.\n\n2. DEFINIR TIPO DE SERVIÇO\n   - Use 'listarTipos' passando o unidade_id.\n   - Pergunte se deseja CONSULTA ou EXAME.\n   - Guarde o 'tipo' escolhido.\n\n3. ESCOLHER ESPECIALIDADE / GRUPO\n   - Use 'listarGrupos' passando tipo e unidade_id.\n   - Apresente os grupos disponíveis e peça para o paciente escolher.\n   - Guarde o 'grupo_id' escolhido.\n\n4. ESCOLHER PROCEDIMENTO\n   - Use 'listarProcedimentos' passando grupo_id e unidade_id.\n   - Apresente os procedimentos com seus VALORES (sempre informe o preço).\n   - Guarde o 'procedimento_id' escolhido.\n\n5. VERIFICAR DATAS DISPONÍVEIS\n   - Use 'listarDias' passando procedimento_id e unidade_id.\n   - Apresente as datas disponíveis para o paciente escolher.\n   - Guarde a 'data' escolhida (formato YYYY-MM-DD).\n\n6. ESCOLHER MÉDICO E HORÁRIO\n   - Use 'listarAgendas' passando procedimento_id, unidade_id e data.\n   - Apresente médicos e horários disponíveis.\n   - Guarde o 'medico_id' e 'agenda_exames_id' escolhidos.\n\n7. FINALIZAR AGENDAMENTO\n   - Peça o CPF (somente números) e o Nome completo do paciente.\n   - Confirme TODOS os dados com o paciente antes de prosseguir.\n   - Use 'efetuarAgendamento' com: agenda_exames_id, medico_id, procedimento_id, cpf e nome.\n   - Informe o resultado ao paciente.\n\nREGRAS GERAIS:\n- Data atual: {{ $now }}\n- NUNCA invente dados. Use sempre as ferramentas para obter informações.\n- Se a API falhar ou retornar vazio, informe o paciente e ofereça alternativas.\n- Sempre confirme cada escolha antes de avançar.\n- Formate valores monetários no padrão brasileiro (R$ 0.000,00).\n- Se o paciente pedir algo fora do escopo de agendamento, oriente gentilmente."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [400, 0],
+      "id": "agent_1",
+      "name": "Camila AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [100, 300],
+      "id": "model_1",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.2,
+      "position": [300, 300],
+      "id": "memory_1",
+      "name": "Chat Memory"
+    },
+    {
+      "parameters": {
+        "name": "listarUnidades",
+        "description": "Lista todas as unidades (clínicas) disponíveis da rede Top Saúde. Retorna o ID e o nome de cada unidade. Use esta ferramenta no INÍCIO do atendimento para que o paciente escolha onde deseja ser atendido. Não requer parâmetros de entrada.",
+        "method": "POST",
+        "url": "http://SEU_DOMINIO/api/chatBot/listarUnidades",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer c9e23f4a8b9d47f0b6c1a27d98f2e4a1d54c3b7a9e8f1c0d2a6b4f9e7c1d3a5b"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [500, 300],
+      "id": "tool_listarUnidades",
+      "name": "Listar Unidades"
+    },
+    {
+      "parameters": {
+        "name": "listarTipos",
+        "description": "Lista os tipos de atendimento disponíveis em uma unidade (ex: CONSULTA, EXAME). Use após o paciente escolher a unidade. Requer o unidade_id.",
+        "method": "POST",
+        "url": "http://SEU_DOMINIO/api/chatBot/listarTipos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer c9e23f4a8b9d47f0b6c1a27d98f2e4a1d54c3b7a9e8f1c0d2a6b4f9e7c1d3a5b"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"unidade_id\": {{ $fromAI('unidade_id', 'ID numérico da unidade escolhida pelo paciente', 'number') }} }",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [700, 300],
+      "id": "tool_listarTipos",
+      "name": "Listar Tipos"
+    },
+    {
+      "parameters": {
+        "name": "listarGrupos",
+        "description": "Lista os grupos de especialidades ou exames disponíveis para o tipo escolhido (consulta ou exame) na unidade. Use após o paciente definir se quer consulta ou exame. Requer tipo e unidade_id.",
+        "method": "POST",
+        "url": "http://SEU_DOMINIO/api/chatBot/listarGrupos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer c9e23f4a8b9d47f0b6c1a27d98f2e4a1d54c3b7a9e8f1c0d2a6b4f9e7c1d3a5b"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"tipo\": \"{{ $fromAI('tipo', 'Tipo de atendimento escolhido pelo paciente: consulta ou exame', 'string') }}\", \"unidade_id\": {{ $fromAI('unidade_id', 'ID numérico da unidade escolhida', 'number') }} }",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [900, 300],
+      "id": "tool_listarGrupos",
+      "name": "Listar Grupos"
+    },
+    {
+      "parameters": {
+        "name": "listarProcedimentos",
+        "description": "Lista os procedimentos disponíveis dentro de um grupo/especialidade, incluindo o VALOR de cada procedimento. Use após o paciente escolher o grupo. Requer grupo_id e unidade_id. Sempre apresente o valor ao paciente.",
+        "method": "POST",
+        "url": "http://SEU_DOMINIO/api/chatBot/listarProcedimentos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer c9e23f4a8b9d47f0b6c1a27d98f2e4a1d54c3b7a9e8f1c0d2a6b4f9e7c1d3a5b"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"grupo_id\": {{ $fromAI('grupo_id', 'ID numérico do grupo de especialidade escolhido pelo paciente', 'number') }}, \"unidade_id\": {{ $fromAI('unidade_id', 'ID numérico da unidade escolhida', 'number') }} }",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [1100, 300],
+      "id": "tool_listarProcedimentos",
+      "name": "Listar Procedimentos"
+    },
+    {
+      "parameters": {
+        "name": "listarDias",
+        "description": "Lista as datas que possuem agenda disponível para o procedimento escolhido na unidade. Use após o paciente escolher o procedimento. Requer procedimento_id e unidade_id.",
+        "method": "POST",
+        "url": "http://SEU_DOMINIO/api/chatBot/listarDias",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer c9e23f4a8b9d47f0b6c1a27d98f2e4a1d54c3b7a9e8f1c0d2a6b4f9e7c1d3a5b"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"procedimento_id\": {{ $fromAI('procedimento_id', 'ID numérico do procedimento escolhido pelo paciente', 'number') }}, \"unidade_id\": {{ $fromAI('unidade_id', 'ID numérico da unidade escolhida', 'number') }} }",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [500, 520],
+      "id": "tool_listarDias",
+      "name": "Listar Dias"
+    },
+    {
+      "parameters": {
+        "name": "listarAgendas",
+        "description": "Lista os médicos e horários disponíveis para uma data específica. Retorna 'medico_id' e 'agenda_exames_id' que são necessários para efetuar o agendamento. Use após o paciente escolher a data. Requer procedimento_id, unidade_id e data (formato YYYY-MM-DD).",
+        "method": "POST",
+        "url": "http://SEU_DOMINIO/api/chatBot/listarAgendas",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer c9e23f4a8b9d47f0b6c1a27d98f2e4a1d54c3b7a9e8f1c0d2a6b4f9e7c1d3a5b"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"procedimento_id\": {{ $fromAI('procedimento_id', 'ID numérico do procedimento escolhido', 'number') }}, \"unidade_id\": {{ $fromAI('unidade_id', 'ID numérico da unidade escolhida', 'number') }}, \"data\": \"{{ $fromAI('data', 'Data escolhida pelo paciente no formato YYYY-MM-DD', 'string') }}\" }",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [700, 520],
+      "id": "tool_listarAgendas",
+      "name": "Listar Agendas"
+    },
+    {
+      "parameters": {
+        "name": "efetuarAgendamento",
+        "description": "Efetua o agendamento final do paciente. Use SOMENTE após coletar e confirmar todos os dados com o paciente. Requer: agenda_exames_id (obtido de listarAgendas), medico_id (obtido de listarAgendas), procedimento_id, cpf (somente números) e nome completo do paciente.",
+        "method": "POST",
+        "url": "http://SEU_DOMINIO/api/chatBot/efetuarAgendamento",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer c9e23f4a8b9d47f0b6c1a27d98f2e4a1d54c3b7a9e8f1c0d2a6b4f9e7c1d3a5b"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"agenda_exames_id\": {{ $fromAI('agenda_exames_id', 'ID da agenda retornado pela ferramenta listarAgendas', 'number') }}, \"medico_id\": {{ $fromAI('medico_id', 'ID do médico retornado pela ferramenta listarAgendas', 'number') }}, \"procedimento_id\": {{ $fromAI('procedimento_id', 'ID numérico do procedimento escolhido', 'number') }}, \"cpf\": \"{{ $fromAI('cpf', 'CPF do paciente somente números sem pontos ou traços', 'string') }}\", \"nome\": \"{{ $fromAI('nome', 'Nome completo do paciente', 'string') }}\" }",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [900, 520],
+      "id": "tool_efetuarAgendamento",
+      "name": "Efetuar Agendamento"
+    }
+  ],
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Camila AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Camila AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Unidades": {
+      "ai_tool": [
+        [
+          {
+            "node": "Camila AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Tipos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Camila AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Grupos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Camila AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Procedimentos": {
+      "ai_tool": [
+        [
+          {
+            "node": "Camila AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Dias": {
+      "ai_tool": [
+        [
+          {
+            "node": "Camila AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar Agendas": {
+      "ai_tool": [
+        [
+          {
+            "node": "Camila AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Efetuar Agendamento": {
+      "ai_tool": [
+        [
+          {
+            "node": "Camila AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Camila AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
